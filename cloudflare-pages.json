@@ -1,0 +1,14 @@
+{
+  "build": {
+    "command": "npm run cloudflare",
+    "output": "dist"
+  },
+  "env": {
+    "VITE_API_URL": "https://api.smartestnotes.com/api",
+    "VITE_TELEGRAM_BOT_API_KEY": "1234567890:AAAA-BBBBccccDDDDeeeeFFFgggHHHiiijjj"
+  },
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/.*", "dest": "/index.html" }
+  ]
+}
