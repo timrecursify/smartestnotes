@@ -74,6 +74,38 @@ const Login = () => {
       handleTelegramCallback();
     }
     
+    // Handle Telegram WebApp callback
+    window.onTelegramAuth = (user) => {
+      if (user) {
+        // Convert WebApp user data to expected format
+        const authData = {
+          tg_id: user.id.toString(),
+          tg_first_name: user.first_name,
+          tg_username: user.username,
+          tg_photo_url: user.photo_url,
+          tg_auth_date: user.auth_date.toString(),
+          tg_hash: user.hash
+        };
+        
+        // Process login with Telegram data
+        loginWithTelegram(authData)
+          .then(success => {
+            if (success) {
+              navigate('/', { replace: true });
+            } else {
+              setError('Failed to authenticate with Telegram');
+            }
+          })
+          .catch(err => {
+            setError('An error occurred during authentication');
+            console.error(err);
+          });
+      }
+    };
+    
+    // Expose the callback function globally
+    window.onTelegramAuth = window.onTelegramAuth || function() {};
+    
     return () => {
       // Clean up
       if (container) {
@@ -82,55 +114,69 @@ const Login = () => {
     };
   }, [loginWithTelegram, navigate]);
   
+  // Handle direct Telegram login via URL
+  const handleTelegramLogin = () => {
+    window.open('https://t.me/notes20bot?start=auth', '_blank');
+  };
+  
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white text-center">
-          Sign in to your account
+    <div className="flex flex-col items-center justify-center space-y-8 max-w-md mx-auto px-4 py-8">
+      <div className="text-center space-y-2 w-full">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          Welcome to Smartest Notes
         </h2>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 text-center">
-          Use your Telegram account to sign in
+        <p className="text-md text-gray-600 dark:text-gray-400">
+          Sign in with your Telegram account to continue
         </p>
       </div>
       
-      {/* Loading indicator */}
-      {isLoading && (
-        <div className="flex justify-center py-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-        </div>
-      )}
-      
-      {/* Error message */}
-      {error && (
-        <div className="p-3 rounded-md bg-red-50 dark:bg-red-900/50 text-red-800 dark:text-red-200">
-          <p className="text-sm">{error}</p>
-        </div>
-      )}
-      
-      {/* Telegram login button */}
-      {!isLoading && (
-        <div className="space-y-6">
-          <div id="telegram-login" className="flex justify-center"></div>
-          
-          {/* Manual Telegram button as fallback */}
-          <div className="text-center">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-              Or login with your Telegram account using this link
-            </p>
-            <a
-              href="https://t.me/notes20bot?start=auth"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <RiTelegramLine className="mr-2 h-5 w-5" />
-              Login with Telegram
-            </a>
+      {/* Login card */}
+      <div className="w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden p-6 space-y-6">
+        {/* Loading indicator */}
+        {isLoading && (
+          <div className="flex justify-center py-6">
+            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
           </div>
-        </div>
-      )}
+        )}
+        
+        {/* Error message */}
+        {error && (
+          <div className="p-4 rounded-md bg-red-50 dark:bg-red-900/50 text-red-800 dark:text-red-200 text-center">
+            <p>{error}</p>
+          </div>
+        )}
+        
+        {/* Telegram login options */}
+        {!isLoading && (
+          <div className="space-y-6">
+            {/* Telegram widget (script injects button here) */}
+            <div id="telegram-login" className="flex justify-center min-h-[48px]"></div>
+            
+            {/* Divider */}
+            <div className="relative flex py-3 items-center">
+              <div className="flex-grow border-t border-gray-300 dark:border-gray-700"></div>
+              <span className="flex-shrink mx-3 text-sm text-gray-500 dark:text-gray-400">or</span>
+              <div className="flex-grow border-t border-gray-300 dark:border-gray-700"></div>
+            </div>
+            
+            {/* Manual Telegram button as fallback */}
+            <div className="text-center">
+              <button
+                onClick={handleTelegramLogin}
+                className="w-full inline-flex items-center justify-center px-5 py-3 border border-transparent rounded-lg shadow-sm text-base font-medium text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+              >
+                <RiTelegramLine className="mr-2 h-6 w-6" />
+                Log in with Telegram
+              </button>
+              <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                You'll be redirected to Telegram to authorize
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
       
-      <div className="mt-6 text-center">
+      <div className="text-center">
         <p className="text-xs text-gray-600 dark:text-gray-400">
           By signing in, you agree to our{' '}
           <a href="/terms" className="text-blue-600 dark:text-blue-400 hover:underline">
