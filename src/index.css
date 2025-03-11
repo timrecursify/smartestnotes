@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles for the app */
+@layer base {
+  :root {
+    --color-primary: 59 130 246; /* blue-500 */
+    --color-secondary: 99 102 241; /* indigo-500 */
+    --color-accent: 139 92 246; /* violet-500 */
+    --color-success: 34 197 94; /* green-500 */
+    --color-warning: 234 179 8; /* yellow-500 */
+    --color-error: 239 68 68; /* red-500 */
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply font-sans text-base;
+    @apply min-h-screen;
+    @apply transition-colors duration-200;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-medium;
+  }
+
+  /* Focus styles for accessibility */
+  *:focus-visible {
+    @apply outline-2 outline-blue-500 outline-offset-2;
+  }
+
+  /* Custom scrollbar for better UX */
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-100 dark:bg-gray-800;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400 dark:bg-gray-500;
+  }
+}
+
+/* Component classes */
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply transition-colors duration-200;
+  }
+
+  .btn-primary {
+    @apply btn bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500;
+  }
+
+  .btn-secondary {
+    @apply btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-blue-500;
+  }
+
+  .btn-danger {
+    @apply btn bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+  }
+
+  .btn-icon {
+    @apply inline-flex items-center justify-center p-2 rounded-md;
+    @apply text-gray-500 hover:text-gray-700 hover:bg-gray-100;
+    @apply dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500;
+  }
+
+  .card {
+    @apply bg-white dark:bg-gray-800 rounded-lg shadow-md p-4;
+    @apply border border-gray-200 dark:border-gray-700;
+  }
+
+  .form-input {
+    @apply block w-full rounded-md border-gray-300 dark:border-gray-600;
+    @apply bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100;
+    @apply shadow-sm focus:border-blue-500 focus:ring-blue-500;
+  }
+
+  .form-label {
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1;
+  }
+
+  .form-error {
+    @apply mt-1 text-sm text-red-600 dark:text-red-400;
+  }
+
+  .note-card {
+    @apply card hover:shadow-lg transition-shadow duration-200;
+    @apply cursor-pointer border-l-4 border-l-blue-500;
+  }
+
+  .nav-link {
+    @apply flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md;
+    @apply text-gray-600 hover:text-gray-900 hover:bg-gray-100;
+    @apply dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800;
+  }
+
+  .nav-link-active {
+    @apply text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700;
+    @apply dark:text-blue-400 dark:bg-gray-900 dark:hover:bg-gray-800;
+  }
+}
+
+/* Utility classes */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .markdown {
+    @apply prose dark:prose-invert max-w-none;
+    @apply prose-headings:font-semibold prose-a:text-blue-600 dark:prose-a:text-blue-400;
+    @apply prose-img:rounded-md prose-img:mx-auto;
+    @apply prose-code:bg-gray-100 dark:prose-code:bg-gray-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded;
+  }
+}
