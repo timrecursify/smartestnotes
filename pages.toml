@@ -1,0 +1,14 @@
+# Cloudflare Pages configuration file
+
+[build]
+  command = "npm run cloudflare-build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# Redirects and rewrites for SPA
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
