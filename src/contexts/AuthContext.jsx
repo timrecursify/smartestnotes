@@ -68,7 +68,16 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     
     try {
+      console.log('AuthContext: Attempting loginWithTelegram with data:', 
+        JSON.stringify({
+          ...telegramData,
+          tg_init_data: telegramData.tg_init_data ? `${telegramData.tg_init_data.slice(0, 20)}...` : undefined
+        })
+      );
+      
       const response = await api.post('/auth/telegram', telegramData);
+      console.log('AuthContext: Login successful, received response:', JSON.stringify(response.data));
+      
       const { token, user } = response.data;
       
       // Store token in local storage
@@ -83,8 +92,16 @@ export const AuthProvider = ({ children }) => {
       
       return true;
     } catch (error) {
-      console.error('Error logging in with Telegram:', error);
-      setError(error.response?.data?.message || 'Failed to log in with Telegram');
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'Failed to log in with Telegram';
+      console.error('AuthContext: Error logging in with Telegram:', errorMessage);
+      
+      // Log detailed error information
+      if (error.response) {
+        console.error('AuthContext: Error response data:', error.response.data);
+        console.error('AuthContext: Error response status:', error.response.status);
+      }
+      
+      setError(errorMessage);
       return false;
     } finally {
       setIsLoading(false);

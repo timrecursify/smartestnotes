@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import api from '../services/api';
 
 /**
  * Telegram WebApp automatic authentication component
@@ -9,42 +10,85 @@ import { useAuth } from '../hooks/useAuth';
  */
 const TelegramAuth = () => {
   const [status, setStatus] = useState('Initializing...');
+  const [logs, setLogs] = useState([]);
   const { loginWithTelegram } = useAuth();
   const navigate = useNavigate();
+
+  // Add a log entry with timestamp
+  const addLog = (message) => {
+    const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+    const logEntry = `[${timestamp}] ${message}`;
+    console.log(logEntry);
+    setLogs(prev => [...prev, logEntry]);
+  };
 
   useEffect(() => {
     const performTelegramAuth = async () => {
       try {
-        // Log all available window properties to debug WebApp detection
-        console.log('Window properties:', Object.keys(window));
+        addLog('Starting Telegram WebApp authentication');
+        
+        // Log user agent for debugging
+        addLog(`User agent: ${navigator.userAgent}`);
         
         // More lenient check for Telegram WebApp - some clients may load it differently
-        const isTelegramWebApp = 
+        const isTelegramWebApp = !!(
           (window.Telegram && window.Telegram.WebApp) || 
-          window.TelegramWebApp || 
-          window.sessionStorage.getItem('telegramWebAppData');
+          window.TelegramWebApp
+        );
         
-        // Handle non-Telegram WebApp environment with fallback
-        if (!isTelegramWebApp) {
-          console.log('Not detected in Telegram WebApp environment, checking URL parameters');
+        addLog(`Telegram WebApp detected: ${isTelegramWebApp}`);
+        
+        // First check if we're in a Telegram WebApp environment
+        if (isTelegramWebApp) {
+          // Get WebApp object
+          const webApp = window.Telegram?.WebApp || window.TelegramWebApp;
           
-          // Try to get auth data from URL parameters as fallback
-          const urlParams = new URLSearchParams(window.location.search);
-          const tgAuthData = urlParams.get('tgAuthData');
-          
-          if (tgAuthData) {
-            // Process URL-based auth data
+          if (webApp) {
+            addLog('Accessing Telegram WebApp API');
+            
             try {
-              const decodedData = JSON.parse(atob(tgAuthData));
-              console.log('Found auth data in URL:', decodedData);
+              if (typeof webApp.ready === 'function') {
+                webApp.ready();
+                addLog('Called WebApp.ready()');
+              }
               
-              // Use the auth data directly
-              setStatus('Processing auth data from URL...');
-              const success = await loginWithTelegram(decodedData);
+              // Only call if the method exists
+              if (typeof webApp.enableClosingConfirmation === 'function') {
+                webApp.enableClosingConfirmation();
+                addLog('Called WebApp.enableClosingConfirmation()');
+              }
+            } catch (e) {
+              addLog(`WebApp method error: ${e.message}`);
+            }
+            
+            // According to Telegram docs, we should use the initData for authentication
+            if (webApp.initData) {
+              addLog(`WebApp initData available (length: ${webApp.initData.length})`);
+              
+              // Prepare auth data with initData which contains all necessary auth info
+              const authData = {
+                tg_webapp: true,
+                tg_init_data: webApp.initData,
+                // Add minimal user data as fallback
+                tg_id: webApp.initDataUnsafe?.user?.id?.toString() || '',
+                tg_first_name: webApp.initDataUnsafe?.user?.first_name || '',
+                tg_username: webApp.initDataUnsafe?.user?.username || ''
+              };
+              
+              setStatus('Authenticating with Telegram WebApp...');
+              addLog(`Sending WebApp auth data with initData`);
+              
+              // Attempt login with WebApp data
+              const success = await loginWithTelegram(authData);
               
               if (success) {
+                addLog('Authentication successful with WebApp data');
                 setStatus('Login successful, redirecting...');
+                
+                // Redirect to the appropriate page
+                const urlParams = new URLSearchParams(window.location.search);
                 const noteId = urlParams.get('note');
+                
                 if (noteId) {
                   navigate(`/notes/${noteId}`, { replace: true });
                 } else {
@@ -52,131 +96,66 @@ const TelegramAuth = () => {
                 }
                 return;
               } else {
-                setStatus('Authentication failed');
-                // Continue with standard flow after a delay
-                setTimeout(() => {
-                  navigate('/login', { replace: true });
-                }, 2000);
-                return;
+                addLog('Authentication failed with WebApp data');
               }
-            } catch (e) {
-              console.error('Error processing URL auth data:', e);
+            } else {
+              addLog('No initData available in WebApp object');
             }
+          } else {
+            addLog('Telegram WebApp object not found');
           }
-          
-          // Auto-redirect to login after a short delay
-          setStatus('Not opened from Telegram, redirecting to login...');
-          setTimeout(() => {
-            navigate('/login', { replace: true });
-          }, 2000);
-          return;
         }
-
-        // Get Telegram WebApp object, whichever way it's available
-        const webApp = window.Telegram?.WebApp || window.TelegramWebApp;
         
-        if (webApp) {
-          // Standard WebApp flow
-          console.log('Telegram WebApp detected:', webApp);
-          
+        // Try to get auth data from URL parameters as fallback
+        const urlParams = new URLSearchParams(window.location.search);
+        const tgAuthData = urlParams.get('tgAuthData');
+        
+        if (tgAuthData) {
+          addLog('Found tgAuthData in URL parameters');
           try {
-            webApp.ready();
-            // Enable closing confirmation only if the method exists
-            if (typeof webApp.enableClosingConfirmation === 'function') {
-              webApp.enableClosingConfirmation();
-            }
-          } catch (e) {
-            console.warn('Error calling WebApp methods:', e);
-            // Continue anyway
-          }
-          
-          setStatus('WebApp initialized');
-          
-          // Get user data from WebApp
-          const webAppUser = webApp.initDataUnsafe?.user;
-          
-          if (webAppUser) {
-            console.log('WebApp user data:', webAppUser);
-            setStatus('User data received');
+            // Directly use URL parameters for authentication
+            const decodedData = JSON.parse(atob(tgAuthData));
+            addLog(`Decoded auth data: ${JSON.stringify(decodedData)}`);
             
-            // Prepare auth data
-            const authData = {
-              tg_id: webAppUser.id.toString(),
-              tg_first_name: webAppUser.first_name || '',
-              tg_last_name: webAppUser.last_name || '',
-              tg_username: webAppUser.username || '',
-              tg_photo_url: webAppUser.photo_url || '',
-              tg_auth_date: Math.floor(Date.now() / 1000).toString(),
-              tg_hash: 'webapp',  // Special webapp token
-              tg_webapp: true,
-              tg_init_data: webApp.initData || ''
-            };
+            // Add webapp flag to ensure backend processes it correctly
+            decodedData.tg_webapp = true;
             
-            // Attempt login
-            setStatus('Logging in...');
-            const success = await loginWithTelegram(authData);
+            // Attempt login with URL parameters
+            setStatus('Authenticating with URL parameters...');
+            const success = await loginWithTelegram(decodedData);
             
             if (success) {
+              addLog('Authentication successful with URL parameters');
               setStatus('Login successful, redirecting...');
-              
-              // Check for note ID in URL parameters
-              const urlParams = new URLSearchParams(window.location.search);
               const noteId = urlParams.get('note');
               
-              // Redirect to appropriate page
               if (noteId) {
                 navigate(`/notes/${noteId}`, { replace: true });
               } else {
                 navigate('/notes', { replace: true });
               }
+              return;
             } else {
-              setStatus('Authentication failed, redirecting to login...');
-              setTimeout(() => {
-                navigate('/login', { replace: true });
-              }, 2000);
+              addLog('Authentication failed with URL parameters');
             }
-          } else {
-            // No user data in WebApp
-            setStatus('No user data found, using authentication fallback...');
-            
-            // Try to create minimal auth data from initData
-            if (webApp.initData) {
-              const minimalAuthData = {
-                tg_webapp: true,
-                tg_init_data: webApp.initData,
-                tg_auth_date: Math.floor(Date.now() / 1000).toString(),
-                tg_hash: 'webapp'
-              };
-              
-              const success = await loginWithTelegram(minimalAuthData);
-              
-              if (success) {
-                setStatus('Login successful, redirecting...');
-                navigate('/notes', { replace: true });
-              } else {
-                setStatus('Authentication failed, redirecting to login...');
-                setTimeout(() => {
-                  navigate('/login', { replace: true });
-                }, 2000);
-              }
-            } else {
-              // If all else fails, redirect to login
-              setStatus('Could not authenticate automatically, redirecting to login...');
-              setTimeout(() => {
-                navigate('/login', { replace: true });
-              }, 2000);
-            }
+          } catch (e) {
+            addLog(`Error processing URL auth data: ${e.message}`);
           }
-        } else {
-          // WebApp object not found
-          setStatus('Telegram WebApp not initialized properly, redirecting to login...');
-          setTimeout(() => {
-            navigate('/login', { replace: true });
-          }, 2000);
         }
+        
+        // If we reached here, all authentication methods failed
+        addLog('All authentication methods failed, redirecting to login page');
+        setStatus('Authentication failed, redirecting to login...');
+        
+        // Show the failure for a moment before redirecting
+        setTimeout(() => {
+          navigate('/login', { replace: true });
+        }, 3000);
+        
       } catch (error) {
-        console.error('Telegram WebApp auth error:', error);
-        setStatus(`Error: ${error.message}`);
+        const errorMsg = `Error: ${error.message}`;
+        addLog(errorMsg);
+        setStatus(errorMsg);
         
         // Redirect to login after error
         setTimeout(() => {
@@ -189,7 +168,7 @@ const TelegramAuth = () => {
   }, [loginWithTelegram, navigate]);
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-white dark:bg-gray-900">
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-white dark:bg-gray-900">
       <div className="text-center p-6 max-w-sm mx-auto">
         <div className="mb-4">
           <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
@@ -200,6 +179,20 @@ const TelegramAuth = () => {
         <p className="text-gray-600 dark:text-gray-400 mb-4">
           {status}
         </p>
+        
+        {/* Debug logs - will help us diagnose any issues */}
+        <div className="mt-8 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-left max-h-80 overflow-y-auto text-xs">
+          <h3 className="font-bold mb-2 text-gray-700 dark:text-gray-300">Debug Logs:</h3>
+          {logs.length > 0 ? (
+            <ul className="space-y-1">
+              {logs.map((log, index) => (
+                <li key={index} className="text-gray-600 dark:text-gray-400 break-all">{log}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-gray-500">No logs yet...</p>
+          )}
+        </div>
       </div>
     </div>
   );
