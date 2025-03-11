@@ -15,54 +15,87 @@ const Login = () => {
   
   // Set up Telegram widget on component mount
   useEffect(() => {
-    // Check for Telegram WebApp integration
+    console.log('Login component mounted, checking for Telegram WebApp...');
+    
+    // Check for Telegram WebApp integration - this runs first
     const checkTelegramWebApp = () => {
       // Check if we're running inside Telegram WebApp
       if (window.Telegram && window.Telegram.WebApp) {
         console.log('Running inside Telegram WebApp, auto-authenticating...');
         
-        const webAppUser = window.Telegram.WebApp.initDataUnsafe?.user;
-        if (webAppUser) {
-          console.log('WebApp user data available:', webAppUser);
+        try {
+          // Get the WebApp data
+          const webApp = window.Telegram.WebApp;
+          // Enable closing confirmations
+          webApp.enableClosingConfirmation();
+          // Set app ready to remove the loading screen
+          webApp.ready();
           
-          // Convert Telegram WebApp user data to the format our API expects
-          const authData = {
-            tg_id: webAppUser.id.toString(),
-            tg_first_name: webAppUser.first_name || '',
-            tg_last_name: webAppUser.last_name || '',
-            tg_username: webAppUser.username || '',
-            tg_photo_url: webAppUser.photo_url || '',
-            tg_auth_date: Math.floor(Date.now() / 1000).toString(),
-            // We don't have a hash from WebApp, but our backend will validate based on the initData
-            tg_hash: 'webapp',
-            tg_webapp: true,
-            // Include the entire initData for validation
-            tg_init_data: window.Telegram.WebApp.initData
-          };
+          const webAppUser = webApp.initDataUnsafe?.user;
+          const initData = webApp.initData;
           
-          // Attempt login with Telegram WebApp data
-          setIsLoading(true);
-          setError(null);
-          
-          loginWithTelegram(authData)
-            .then(success => {
-              if (success) {
-                navigate('/', { replace: true });
-              } else {
-                setError('Failed to automatically authenticate with Telegram WebApp');
-              }
-            })
-            .catch(err => {
-              console.error('Error during Telegram WebApp authentication:', err);
-              setError('Error during automatic authentication');
-            })
-            .finally(() => {
-              setIsLoading(false);
-            });
+          if (webAppUser) {
+            console.log('WebApp user data available:', webAppUser);
+            
+            // Convert Telegram WebApp user data to the format our API expects
+            const authData = {
+              tg_id: webAppUser.id.toString(),
+              tg_first_name: webAppUser.first_name || '',
+              tg_last_name: webAppUser.last_name || '',
+              tg_username: webAppUser.username || '',
+              tg_photo_url: webAppUser.photo_url || '',
+              tg_auth_date: Math.floor(Date.now() / 1000).toString(),
+              // We don't have a hash from WebApp, but our backend will validate based on the initData
+              tg_hash: 'webapp',
+              tg_webapp: true,
+              // Include the entire initData for validation
+              tg_init_data: initData
+            };
+            
+            // Attempt login with Telegram WebApp data
+            setIsLoading(true);
+            setError(null);
+            
+            loginWithTelegram(authData)
+              .then(success => {
+                if (success) {
+                  console.log('Successfully authenticated with Telegram WebApp!');
+                  // Check for note ID in URL parameters
+                  const params = new URLSearchParams(window.location.search);
+                  const noteId = params.get('note');
+                  
+                  // Navigate to the appropriate page
+                  if (noteId) {
+                    navigate(`/notes/${noteId}`, { replace: true });
+                  } else {
+                    navigate('/', { replace: true });
+                  }
+                } else {
+                  console.error('Failed to authenticate with WebApp data');
+                  setError('Failed to automatically authenticate with Telegram WebApp');
+                }
+              })
+              .catch(err => {
+                console.error('Error during Telegram WebApp authentication:', err);
+                setError('Error during automatic authentication');
+              })
+              .finally(() => {
+                setIsLoading(false);
+              });
+          } else {
+            console.error('No user data in WebApp initDataUnsafe');
+            setError('Could not retrieve user data from Telegram');
+          }
+        } catch (error) {
+          console.error('Error in WebApp integration:', error);
+          setError('Error initializing Telegram WebApp');
         }
+      } else {
+        console.log('Not running in Telegram WebApp, showing login button');
       }
     };
 
+    // Run the WebApp check immediately on component mount
     checkTelegramWebApp();
 
     // Create Telegram login script

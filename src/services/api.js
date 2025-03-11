@@ -5,7 +5,7 @@ import axios from 'axios';
  */
 const api = axios.create({
   // API base URL - will be switched to the actual domain in production
-  baseURL: import.meta.env.VITE_API_URL || 'https://api.smartestnotes.com',
+  baseURL: 'https://notes20-api.tim-611.workers.dev/api',
   timeout: 15000, // 15 seconds
   headers: {
     'Content-Type': 'application/json',

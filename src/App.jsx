@@ -17,6 +17,7 @@ import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
 import NotFound from './pages/NotFound';
+import TelegramAuth from './pages/TelegramAuth';
 
 // Protected route wrapper component
 const ProtectedRoute = ({ children }) => {
@@ -55,6 +56,9 @@ export default function App() {
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<Login />} />
       </Route>
+      
+      {/* Telegram WebApp direct authentication route */}
+      <Route path="/telegram" element={<TelegramAuth />} />
       
       {/* Protected routes */}
       <Route element={
