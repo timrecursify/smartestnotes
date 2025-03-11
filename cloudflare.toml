@@ -1,13 +1,12 @@
-# Cloudflare Pages configuration file
-
 [build]
-  command = "npm run cloudflare-build"
+  command = "./cloudflare-build.sh"
   publish = "dist"
-
+  node_bundler = "vite"
+  
 [build.environment]
   NODE_VERSION = "18"
+  NPM_FLAGS = "--no-package-lock --no-audit --prefer-offline"
 
-# Redirects and rewrites for SPA
 [[redirects]]
   from = "/*"
   to = "/index.html"
