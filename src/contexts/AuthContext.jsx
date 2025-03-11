@@ -1,5 +1,5 @@
 import { createContext, useState, useCallback, useEffect } from 'react';
-import { jwtDecode } from 'jwt-decode';
+import jwt_decode from 'jwt-decode';
 import api from '../services/api';
 
 // Create context
@@ -16,7 +16,7 @@ export const AuthProvider = ({ children }) => {
   const isTokenExpired = useCallback((token) => {
     if (!token) return true;
     try {
-      const decoded = jwtDecode(token);
+      const decoded = jwt_decode(token);
       const currentTime = Date.now() / 1000;
       return decoded.exp < currentTime;
     } catch (error) {
