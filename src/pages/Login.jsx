@@ -15,6 +15,56 @@ const Login = () => {
   
   // Set up Telegram widget on component mount
   useEffect(() => {
+    // Check for Telegram WebApp integration
+    const checkTelegramWebApp = () => {
+      // Check if we're running inside Telegram WebApp
+      if (window.Telegram && window.Telegram.WebApp) {
+        console.log('Running inside Telegram WebApp, auto-authenticating...');
+        
+        const webAppUser = window.Telegram.WebApp.initDataUnsafe?.user;
+        if (webAppUser) {
+          console.log('WebApp user data available:', webAppUser);
+          
+          // Convert Telegram WebApp user data to the format our API expects
+          const authData = {
+            tg_id: webAppUser.id.toString(),
+            tg_first_name: webAppUser.first_name || '',
+            tg_last_name: webAppUser.last_name || '',
+            tg_username: webAppUser.username || '',
+            tg_photo_url: webAppUser.photo_url || '',
+            tg_auth_date: Math.floor(Date.now() / 1000).toString(),
+            // We don't have a hash from WebApp, but our backend will validate based on the initData
+            tg_hash: 'webapp',
+            tg_webapp: true,
+            // Include the entire initData for validation
+            tg_init_data: window.Telegram.WebApp.initData
+          };
+          
+          // Attempt login with Telegram WebApp data
+          setIsLoading(true);
+          setError(null);
+          
+          loginWithTelegram(authData)
+            .then(success => {
+              if (success) {
+                navigate('/', { replace: true });
+              } else {
+                setError('Failed to automatically authenticate with Telegram WebApp');
+              }
+            })
+            .catch(err => {
+              console.error('Error during Telegram WebApp authentication:', err);
+              setError('Error during automatic authentication');
+            })
+            .finally(() => {
+              setIsLoading(false);
+            });
+        }
+      }
+    };
+
+    checkTelegramWebApp();
+
     // Create Telegram login script
     const script = document.createElement('script');
     script.src = 'https://telegram.org/js/telegram-widget.js?22';
